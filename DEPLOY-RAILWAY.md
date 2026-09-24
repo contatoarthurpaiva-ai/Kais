@@ -67,3 +67,15 @@ Railway é mais simples para começar: um lugar só.
 ## Cron de recorrências
 Depois de no ar, no serviço do app o Railway permite agendar. Ou use o `vercel.json`
 se migrar para a Vercel. Não é obrigatório para o app funcionar.
+
+## Sobre o aviso de segurança do Railway
+
+Se o Railway barrar por vulnerabilidade em dependência: já atualizei o **Next para
+14.2.35** (as duas CVEs que ele apontou), o **postcss para 8.5.28** e removi o
+`esbuild` da produção. Desliguei o otimizador de imagens (mitiga a falha do AVIF).
+
+Pode sobrar, no `npm audit`, um aviso ligado a correções que **só existem no Next 15+**
+— uma delas é exclusiva de servidores **Windows** (você roda em Linux) e a outra foi
+mitigada. Subir para o Next 15 é uma troca maior, que muda o código e precisa ser feita
+com cuidado. Se o Railway **ainda** bloquear citando uma CVE específica, me mande a
+mensagem exata do log que eu trato aquela versão pontualmente.

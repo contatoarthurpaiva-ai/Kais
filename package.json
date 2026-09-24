@@ -9,7 +9,7 @@
     "start": "next start",
     "start:prod": "prisma db push --skip-generate && npm run seed:admin && next start",
     "setup": "prisma generate && prisma db push && npm run seed:admin",
-    "seed:admin": "tsx scripts/create-admin.ts",
+    "seed:admin": "node scripts/create-admin.mjs",
     "db:up": "docker compose up -d db",
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit",
@@ -22,11 +22,16 @@
     "@types/node": "22.7.4",
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.0",
-    "next": "14.2.15",
+    "next": "14.2.35",
     "prisma": "5.22.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "tsx": "4.19.2",
     "typescript": "5.6.3"
+  },
+  "devDependencies": {
+    "tsx": "4.19.2"
+  },
+  "overrides": {
+    "postcss": "8.5.28"
   }
 }
