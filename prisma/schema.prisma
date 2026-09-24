@@ -1,0 +1,437 @@
+// Kais — modelo de dados (§9).
+// Valores monetários em CENTAVOS (Int) para evitar ponto flutuante.
+// Quantidades em unidade-base via Decimal.
+// Postgres (Railway). Migrations versionadas via `prisma migrate`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Loja & acesso ───────────────────────────────
+
+model Store {
+  id          String   @id @default(cuid())
+  name        String
+  timezone    String   @default("America/Sao_Paulo")
+  currency    String   @default("BRL")
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  users       User[]
+  accounts    FinancialAccount[]
+  categories  ExpenseCategory[]
+  collections Collection[]
+  products    Product[]
+  materials   Material[]
+  feePolicies FeePolicy[]
+  settings    StoreSetting[]
+}
+
+enum UserRole {
+  ADMIN // administradora — altera políticas, confirma abaixo do mínimo
+  OPERADOR // operacional — não altera políticas nem confirma abaixo do mínimo
+}
+
+model User {
+  id           String   @id @default(cuid())
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id])
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(OPERADOR)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  auditLogs    AuditLog[]
+}
+
+model StoreSetting {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id])
+  key     String
+  value   Json
+  @@unique([storeId, key])
+}
+
+// margens/metas — escolhas comerciais, com assistente explicativo
+model MarginPolicy {
+  id          String   @id @default(cuid())
+  storeId     String
+  name        String
+  minMargin   Decimal  @db.Decimal(6, 4) // margem mínima de contribuição
+  goalMargin  Decimal  @db.Decimal(6, 4) // meta de margem
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────────── Contas & financeiro ────────────────────────────
+
+model FinancialAccount {
+  id            String     @id @default(cuid())
+  storeId       String
+  store         Store      @relation(fields: [storeId], references: [id])
+  name          String
+  openingCents  Int        @default(0)
+  openingDate   DateTime
+  entries       LedgerEntry[]
+}
+
+enum LedgerKind {
+  RECEITA
+  DESPESA
+  APORTE
+  RETIRADA
+  TRANSFERENCIA
+  PRO_LABORE
+}
+
+// movimento de caixa — separado do reconhecimento econômico
+model LedgerEntry {
+  id          String           @id @default(cuid())
+  accountId   String
+  account     FinancialAccount @relation(fields: [accountId], references: [id])
+  kind        LedgerKind
+  amountCents Int
+  date        DateTime
+  memo        String?
+  // rastreabilidade da origem
+  saleId      String?
+  expenseId   String?
+  reversedById String?         // estorno rastreável (não apagar liquidado)
+  createdAt   DateTime         @default(now())
+}
+
+model ExpenseCategory {
+  id       String    @id @default(cuid())
+  storeId  String
+  store    Store     @relation(fields: [storeId], references: [id])
+  name     String
+  // classificações independentes
+  fixed    Boolean   @default(false) // fixa/variável
+  nature   String    @default("operacional") // operacional|producao|financeira|outra
+  expenses Expense[]
+}
+
+enum ExpenseStatus {
+  PREVISTO
+  EM_ABERTO
+  PARCIALMENTE_PAGO
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  categoryId     String
+  category       ExpenseCategory @relation(fields: [categoryId], references: [id])
+  description    String
+  amountCents    Int
+  competence     DateTime // competência (regime)
+  dueDate        DateTime?
+  status         ExpenseStatus   @default(EM_ABERTO)
+  supplier       String?
+  document       String?
+  notes          String?
+  collectionId   String? // despesa exclusiva de coleção (resultado gerencial)
+  recurrenceId   String?
+  payments       ExpensePayment[]
+  createdAt      DateTime        @default(now())
+}
+
+model ExpensePayment {
+  id          String   @id @default(cuid())
+  expenseId   String
+  expense     Expense  @relation(fields: [expenseId], references: [id])
+  amountCents Int
+  paidDate    DateTime
+  accountId   String?
+}
+
+model Recurrence {
+  id          String   @id @default(cuid())
+  storeId     String
+  description String
+  amountCents Int
+  categoryId  String
+  frequency   String // MENSAL|SEMANAL|...
+  nextRun     DateTime
+  active      Boolean  @default(true)
+  // gera ocorrências idempotentes (não pagamentos fictícios)
+}
+
+// ─────────────────────── Coleções & destinos econômicos ─────────────────────
+
+model Collection {
+  id        String    @id @default(cuid())
+  storeId   String
+  store     Store     @relation(fields: [storeId], references: [id])
+  name      String
+  season    String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+// ─────────────────────────── Materiais & estoque ────────────────────────────
+
+// material identificado (tipo, cor, composição, unidade-base)
+model Material {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  name      String
+  color     String?
+  unit      String // metro|unidade|...
+  stockGroups StockGroup[]
+  purchaseItems PurchaseItem[]
+  bomLines  BomLine[]
+}
+
+enum StockDestination {
+  MODELO // variante específica
+  COLECAO // coleção específica
+  COMPARTILHADO
+  INDEFINIDO
+}
+
+// grupo de estoque homogêneo — preserva origem econômica (§4.1)
+// valueCents/qty → custo médio ponderado dentro do grupo, nunca global
+model StockGroup {
+  id            String           @id @default(cuid())
+  materialId    String?
+  material      Material?        @relation(fields: [materialId], references: [id])
+  variantId     String? // grupo de produto acabado por variante
+  destination   StockDestination @default(INDEFINIDO)
+  collectionId  String?
+  valueCents    Int              @default(0)
+  qty           Decimal          @db.Decimal(14, 4) @default(0)
+  movements     StockMovement[]
+}
+
+enum MovementKind {
+  COMPRA
+  CONSUMO
+  PRODUCAO_ENTRADA
+  VENDA_SAIDA
+  TRANSFERENCIA
+  AJUSTE
+  DEVOLUCAO
+}
+
+model StockMovement {
+  id           String       @id @default(cuid())
+  groupId      String
+  group        StockGroup   @relation(fields: [groupId], references: [id])
+  kind         MovementKind
+  qty          Decimal      @db.Decimal(14, 4)
+  valueCents   Int // custo contábil gerencial transportado/incorporado
+  reason       String?
+  refId        String? // pedido, ordem de produção, transferência…
+  createdAt    DateTime     @default(now())
+}
+
+model Purchase {
+  id          String         @id @default(cuid())
+  storeId     String
+  supplier    String?
+  date        DateTime
+  freightCents Int           @default(0)
+  items       PurchaseItem[]
+  paidCents   Int            @default(0)
+  createdAt   DateTime       @default(now())
+}
+
+// lote de compra (origem, data, quantidade, valor) + destino econômico
+model PurchaseItem {
+  id           String           @id @default(cuid())
+  purchaseId   String
+  purchase     Purchase         @relation(fields: [purchaseId], references: [id])
+  materialId   String
+  material     Material         @relation(fields: [materialId], references: [id])
+  qty          Decimal          @db.Decimal(14, 4)
+  totalCents   Int
+  destination  StockDestination @default(INDEFINIDO)
+  collectionId String?
+  variantId    String?
+}
+
+// ─────────────────────────── Produtos & fichas ──────────────────────────────
+
+enum ProductOrigin {
+  PROPRIA
+  TERCEIRIZADA
+  REVENDA
+}
+
+model Product {
+  id           String     @id @default(cuid())
+  storeId      String
+  store        Store      @relation(fields: [storeId], references: [id])
+  name         String
+  category     String?
+  origin       ProductOrigin @default(PROPRIA)
+  description  String?
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+  active       Boolean    @default(true)
+  variants     Variant[]
+  createdAt    DateTime   @default(now())
+}
+
+// variante (cor/tamanho) — top e calcinha podem ser vendidos separadamente
+model Variant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  sku        String   @unique
+  color      String?
+  size       String?
+  tablePriceCents Int  @default(0) // preço de tabela
+  boms       Bom[]
+  orderItems OrderLine[]
+}
+
+// ficha técnica versionada por variante (§4.1)
+model Bom {
+  id         String    @id @default(cuid())
+  variantId  String
+  variant    Variant   @relation(fields: [variantId], references: [id])
+  version    Int       @default(1)
+  active     Boolean   @default(true)
+  lines      BomLine[]
+  createdAt  DateTime  @default(now())
+  @@unique([variantId, version])
+}
+
+model BomLine {
+  id            String   @id @default(cuid())
+  bomId         String
+  bom           Bom      @relation(fields: [bomId], references: [id])
+  materialId    String
+  material      Material @relation(fields: [materialId], references: [id])
+  consumption   Decimal  @db.Decimal(14, 4) // consumo por peça na unidade-base
+  // perdas: método declarado (consumo adicional OU rendimento) — nunca ambos
+  wasteMethod   String?  // CONSUMO_ADICIONAL|RENDIMENTO
+  wasteValue    Decimal? @db.Decimal(14, 4)
+  estimated     Boolean  @default(false) // material padrão/estimado (linha, elástico)
+}
+
+// ordem de produção simples: planejada|em_producao|concluida|cancelada
+model ProductionOrder {
+  id         String   @id @default(cuid())
+  variantId  String
+  status     String   @default("PLANEJADA")
+  plannedQty Decimal  @db.Decimal(14, 4)
+  goodQty    Decimal? @db.Decimal(14, 4) // rendimento real
+  costCents  Int?     // custo apurado, preservado
+  createdAt  DateTime @default(now())
+}
+
+// ─────────────────────────── Vendas & recebíveis ────────────────────────────
+
+enum OrderStatus {
+  RASCUNHO
+  CONFIRMADO
+  ENTREGUE
+  CANCELADO
+}
+
+enum PaymentStatus {
+  PENDENTE
+  PARCIAL
+  RECEBIDO
+  ESTORNADO
+}
+
+model SalesOrder {
+  id             String       @id @default(cuid())
+  storeId        String
+  number         Int
+  date           DateTime
+  channel        String? // Instagram|WhatsApp|loja|outro
+  customerName   String?
+  status         OrderStatus  @default(RASCUNHO)
+  paymentStatus  PaymentStatus @default(PENDENTE)
+  freightCharged Int          @default(0) // frete cobrado (receita)
+  freightPaid    Int          @default(0) // frete pago (custo)
+  paymentMethod  String?
+  installments   Int          @default(1)
+  // snapshots de custos/taxas/alocações no momento da venda
+  snapshot       Json?
+  items          OrderLine[]
+  receivables    Receivable[]
+  createdAt      DateTime     @default(now())
+  @@unique([storeId, number])
+}
+
+model OrderLine {
+  id             String     @id @default(cuid())
+  orderId        String
+  order          SalesOrder @relation(fields: [orderId], references: [id])
+  variantId      String
+  variant        Variant    @relation(fields: [variantId], references: [id])
+  qty            Int
+  unitPriceCents Int
+  discountCents  Int        @default(0)
+  // origem do custo (grupo/lote de onde saiu) — snapshot
+  costCents      Int        @default(0)
+  costSource     Json?
+}
+
+model Receivable {
+  id             String     @id @default(cuid())
+  orderId        String
+  order          SalesOrder @relation(fields: [orderId], references: [id])
+  dueDate        DateTime
+  grossCents     Int
+  feesCents      Int        @default(0)
+  netExpectedCents Int
+  receivedCents  Int        @default(0)
+  receivedDate   DateTime?
+  status         PaymentStatus @default(PENDENTE)
+}
+
+// ────────────────────────────── Taxas & preço ───────────────────────────────
+
+// política de taxas — cada taxa declara base, percentual/valor, canal, modalidade
+model FeePolicy {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  name      String
+  base      String   // produto|produto_mais_frete|frete|fixa_por_pedido
+  pct       Decimal? @db.Decimal(8, 6)
+  fixedCents Int?
+  channel   String?
+  modality  String? // pix|cartao_avista|parcelado|...
+  active    Boolean  @default(true)
+}
+
+// cenário de preço salvo (origem, versão, premissas)
+model PriceScenario {
+  id         String   @id @default(cuid())
+  variantId  String
+  inputs     Json // C, E, t, m, A, l e premissas
+  results    Json // preços, contribuição, limites
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+}
+
+// ────────────────────────────── Auditoria ──────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  reason    String?
+  createdAt DateTime @default(now())
+}

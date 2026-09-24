@@ -1,0 +1,32 @@
+{
+  "name": "kais",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "start:prod": "prisma db push --skip-generate && npm run seed:admin && next start",
+    "setup": "prisma generate && prisma db push && npm run seed:admin",
+    "seed:admin": "tsx scripts/create-admin.ts",
+    "db:up": "docker compose up -d db",
+    "test": "tsx --test tests/**/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx examples/simulacao.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "@types/node": "22.7.4",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "next": "14.2.15",
+    "prisma": "5.22.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3"
+  }
+}

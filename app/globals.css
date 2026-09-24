@@ -1,0 +1,183 @@
+/* Kais — tokens de identidade (§2). Paleta aproximada, contraste validado.
+   Dourado nunca em texto pequeno de baixo contraste. Vermelho/âmbar só em
+   estados, sempre com ícone + texto. */
+
+:root {
+  /* marca */
+  --verde: #5f8f80;
+  --verde-escuro: #285549;
+  --marfim: #faf7f0;
+  --areia: #ede5d6;
+  --dourado: #bea16a;
+  --texto: #253c35;
+  --card: #ffffff;
+
+  /* estados (com ícone + texto na UI, nunca só cor) */
+  --ok: #2f7d5b;
+  --alerta: #b7791f; /* âmbar */
+  --erro: #b3261e; /* vermelho */
+
+  /* superfícies e traços */
+  --fundo: var(--marfim);
+  --superficie-2: var(--areia);
+  --borda: #dfd8c7;
+
+  /* tipografia e ritmo */
+  --fonte: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
+    sans-serif;
+  --num: "Inter", var(--fonte);
+  --r-1: 6px;
+  --r-2: 10px;
+  --r-3: 16px;
+  --e-1: 8px;
+  --e-2: 16px;
+  --e-3: 24px;
+  --e-4: 32px;
+  --sombra: 0 1px 2px rgba(37, 60, 53, 0.06), 0 4px 16px rgba(37, 60, 53, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: var(--fonte);
+  color: var(--texto);
+  background: var(--fundo);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* números alinhados e tabulares em valores monetários */
+.num,
+td.num,
+.valor {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+a {
+  color: var(--verde-escuro);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  padding: 10px 16px;
+  cursor: pointer;
+  background: var(--verde-escuro);
+  color: #fff;
+  font-weight: 600;
+}
+.btn:hover {
+  filter: brightness(1.05);
+}
+.btn.secundario {
+  background: transparent;
+  color: var(--verde-escuro);
+  border-color: var(--borda);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-2);
+  box-shadow: var(--sombra);
+  padding: var(--e-3);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--e-2);
+}
+.campo label {
+  font-size: 0.85rem;
+  color: var(--verde-escuro);
+  font-weight: 600;
+}
+.campo input,
+.campo select {
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-1);
+  background: #fff;
+}
+.campo .ajuda {
+  font-size: 0.78rem;
+  color: #6b7a70;
+}
+
+/* resultado somente leitura, distinto da entrada (§1.1) */
+.resultado {
+  background: var(--superficie-2);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-2);
+  padding: var(--e-2);
+}
+.linha-resultado {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--borda);
+}
+.linha-resultado:last-child {
+  border-bottom: 0;
+}
+.linha-resultado .rot {
+  color: #55655c;
+}
+.linha-resultado .val {
+  font-weight: 700;
+}
+
+/* estados de simulação */
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+.estado.dentro_da_meta {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: #eef7f1;
+}
+.estado.abaixo_da_meta {
+  color: var(--alerta);
+  border-color: var(--alerta);
+  background: #fdf6e9;
+}
+.estado.abaixo_do_minimo,
+.estado.contribuicao_negativa {
+  color: var(--erro);
+  border-color: var(--erro);
+  background: #fbeceb;
+}
+.estado.incompleto {
+  color: #55655c;
+  border-color: var(--borda);
+  background: #f3efe6;
+}
