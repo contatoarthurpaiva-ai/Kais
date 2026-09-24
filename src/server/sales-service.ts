@@ -14,6 +14,7 @@
  * de referência para a Etapa 3; revise contra o schema antes de usar em produção.
  */
 import { prisma } from '../../lib/db';
+import { Prisma } from '@prisma/client';
 import { buildReceivables, expandKit, recognizeRevenue, type OrderStatus } from '../domain/sales';
 import { computeOrder, type Fee, type OrderItem } from '../domain/order';
 
@@ -80,10 +81,10 @@ export async function confirmSale(input: ConfirmSaleInput) {
         installments: input.installments,
         snapshot: {
           idempotencyKey: input.idempotencyKey,
-          fees: input.fees as unknown as object,
-          calc: calc as unknown as object,
+          fees: input.fees,
+          calc,
           recognition,
-        },
+        } as unknown as Prisma.InputJsonValue,
         items: {
           create: input.items.map((it) => ({
             variantId: it.variantId,
