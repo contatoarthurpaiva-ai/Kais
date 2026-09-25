@@ -80,3 +80,16 @@ export async function criarConta(form: FormData) {
   });
   revalidatePath('/financeiro');
 }
+
+export async function excluirGasto(form: FormData) {
+  const s = requireSession();
+  assertCan(s.role, 'expense:manage');
+  const id = String(form.get('id') ?? '');
+  if (!id) return;
+  await prisma.$transaction([
+    prisma.expensePayment.deleteMany({ where: { expenseId: id } }),
+    prisma.expense.delete({ where: { id } }),
+  ]);
+  revalidatePath('/financeiro');
+  revalidatePath('/visao-geral');
+}

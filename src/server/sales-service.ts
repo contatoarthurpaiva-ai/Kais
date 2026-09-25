@@ -54,19 +54,14 @@ export async function confirmSale(input: ConfirmSaleInput) {
     input.dueDates,
   );
 
-  // 3) transação atômica: baixa de estoque condicional + venda + recebíveis
+  // 3) transação atômica: baixa a quantidade de peças prontas + venda + recebíveis
   return prisma.$transaction(async (tx) => {
-    // Só controla estoque de produto ACABADO se ele existir para a variante.
-    // Sem grupo de estoque (venda sob encomenda), a venda não é bloqueada.
+    // Cada venda desconta do estoque de peças prontas da variante (nunca negativo).
     for (const it of input.items) {
-      const grupo = await tx.stockGroup.findFirst({ where: { variantId: it.variantId } });
-      if (!grupo) continue; // sob encomenda / sem controle de acabado
-      const updated = await tx.stockGroup.updateMany({
-        where: { variantId: it.variantId, qty: { gte: it.qty } },
-        data: { qty: { decrement: it.qty } },
-      });
-      if (updated.count === 0) {
-        throw new Error(`Estoque insuficiente para ${it.sku} — venda não concluída`);
+      const v = await tx.variant.findUnique({ where: { id: it.variantId } });
+      if (v) {
+        const novo = Math.max(0, v.stockQty - it.qty);
+        await tx.variant.update({ where: { id: it.variantId }, data: { stockQty: novo } });
       }
     }
 

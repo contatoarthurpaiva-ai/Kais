@@ -3,7 +3,9 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader, Table, Empty, Money } from '@/lib/ui';
+import { ConfirmSubmit } from '@/lib/confirm';
 import { SaleForm } from './sale-form';
+import { excluirVenda } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +58,7 @@ export default async function Vendas() {
         {vendas.length === 0 ? (
           <Empty>Nenhuma venda registrada.</Empty>
         ) : (
-          <Table head={['Nº', 'Data', 'Situação', 'Itens', 'Bruto', 'Parcelas']}>
+          <Table head={['Nº', 'Data', 'Situação', 'Itens', 'Bruto', 'Parcelas', '']}>
             {vendas.map((o) => {
               const bruto = o.items.reduce((a, it) => a + it.unitPriceCents * it.qty, 0) + o.freightCharged;
               return (
@@ -67,6 +69,12 @@ export default async function Vendas() {
                   <td style={{ padding: '8px 10px' }}>{o.items.length}</td>
                   <td style={{ padding: '8px 10px' }} className="num"><Money cents={bruto} /></td>
                   <td style={{ padding: '8px 10px' }}>{o.receivables.length}x</td>
+                  <td style={{ padding: '8px 10px' }}>
+                    <form action={excluirVenda}>
+                      <input type="hidden" name="id" value={o.id} />
+                      <ConfirmSubmit message={`Excluir a venda nº ${o.number}? As peças voltam ao estoque.`}>Excluir</ConfirmSubmit>
+                    </form>
+                  </td>
                 </tr>
               );
             })}

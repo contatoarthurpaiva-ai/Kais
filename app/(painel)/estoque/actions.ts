@@ -72,3 +72,21 @@ export async function registrarCompraMaterial(form: FormData) {
   revalidatePath('/estoque');
   revalidatePath('/produtos');
 }
+
+export async function excluirMaterial(form: FormData) {
+  const s = requireSession();
+  assertCan(s.role, 'product:manage');
+  const id = String(form.get('id') ?? '');
+  if (!id) return;
+  const grupos = await prisma.stockGroup.findMany({ where: { materialId: id }, select: { id: true } });
+  const gids = grupos.map((g) => g.id);
+  await prisma.$transaction([
+    prisma.stockMovement.deleteMany({ where: { groupId: { in: gids } } }),
+    prisma.stockGroup.deleteMany({ where: { materialId: id } }),
+    prisma.bomLine.deleteMany({ where: { materialId: id } }),
+    prisma.purchaseItem.deleteMany({ where: { materialId: id } }),
+    prisma.material.delete({ where: { id } }),
+  ]);
+  revalidatePath('/estoque');
+  revalidatePath('/produtos');
+}

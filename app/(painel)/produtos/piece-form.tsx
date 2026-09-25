@@ -8,11 +8,15 @@ function num(v: string) {
 }
 const brl = (v: number) => 'R$ ' + v.toFixed(2).replace('.', ',');
 
-export function PieceForm() {
+export function PieceForm({ metaMargin }: { metaMargin: number }) {
   const [custo, setCusto] = useState('');
   const [preco, setPreco] = useState('');
   const c = num(custo);
   const p = num(preco);
+
+  const sugerido = c > 0 && metaMargin < 1 ? c / (1 - metaMargin) : 0;
+  const sugeridoBRL = Math.ceil(sugerido * 100) / 100;
+
   const sobra = p - c;
   const margem = p > 0 ? (sobra / p) * 100 : 0;
   const mostrar = p > 0 || c > 0;
@@ -39,8 +43,21 @@ export function PieceForm() {
           <span className="ajuda">tecido, costura, embalagem… um valor por peça</span>
         </div>
         <div className="campo">
-          <label htmlFor="tablePrice">Por quanto quer vender? (R$)</label>
+          <label htmlFor="tablePrice">Por quanto vender? (R$)</label>
           <input id="tablePrice" name="tablePrice" inputMode="decimal" value={preco} onChange={(e) => setPreco(e.target.value)} placeholder="45,00" />
+          {sugerido > 0 && (
+            <span className="ajuda">
+              Sugestão p/ margem de {(metaMargin * 100).toFixed(0)}%:{' '}
+              <button type="button" onClick={() => setPreco(sugeridoBRL.toFixed(2).replace('.', ','))} style={{ background: 'none', border: 0, color: 'var(--verde-escuro)', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+                usar {brl(sugeridoBRL)}
+              </button>
+            </span>
+          )}
+        </div>
+        <div className="campo">
+          <label htmlFor="stockQty">Quantas você tem prontas?</label>
+          <input id="stockQty" name="stockQty" type="number" step="1" min="0" defaultValue={0} />
+          <span className="ajuda">cada venda desconta desse total</span>
         </div>
       </div>
 

@@ -48,3 +48,22 @@ export async function registrarVenda(form: FormData) {
   revalidatePath('/vendas');
   revalidatePath('/visao-geral');
 }
+
+export async function excluirVenda(form: FormData) {
+  const s = requireSession();
+  assertCan(s.role, 'sale:create');
+  const id = String(form.get('id') ?? '');
+  if (!id) return;
+  await prisma.$transaction(async (tx) => {
+    const linhas = await tx.orderLine.findMany({ where: { orderId: id } });
+    // devolve as peças ao estoque
+    for (const l of linhas) {
+      await tx.variant.update({ where: { id: l.variantId }, data: { stockQty: { increment: l.qty } } });
+    }
+    await tx.receivable.deleteMany({ where: { orderId: id } });
+    await tx.orderLine.deleteMany({ where: { orderId: id } });
+    await tx.salesOrder.delete({ where: { id } });
+  });
+  revalidatePath('/vendas');
+  revalidatePath('/visao-geral');
+}

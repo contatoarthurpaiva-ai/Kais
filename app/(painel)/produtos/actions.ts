@@ -60,6 +60,7 @@ export async function criarPeca(form: FormData) {
           size,
           tablePriceCents: cents(form.get('tablePrice')),
           directCostCents: cents(form.get('cost')),
+          stockQty: Math.max(0, Math.round(reais(form.get('stockQty')))),
           boms: { create: { version: 1, active: true } },
         },
       },
@@ -86,6 +87,7 @@ export async function adicionarVariante(form: FormData) {
       size,
       tablePriceCents: cents(form.get('tablePrice')),
       directCostCents: cents(form.get('cost')),
+      stockQty: Math.max(0, Math.round(reais(form.get('stockQty')))),
       boms: { create: { version: 1, active: true } },
     },
   });
@@ -116,4 +118,24 @@ export async function custoDaVariante(variantId: string) {
     };
   });
   return computeVariantCost({ materials });
+}
+
+export async function excluirPeca(form: FormData) {
+  const s = requireSession();
+  assertCan(s.role, 'product:manage');
+  const productId = String(form.get('id') ?? '');
+  if (!productId) return;
+  const variants = await prisma.variant.findMany({ where: { productId }, select: { id: true } });
+  const vids = variants.map((v) => v.id);
+  const boms = await prisma.bom.findMany({ where: { variantId: { in: vids } }, select: { id: true } });
+  const bomIds = boms.map((b) => b.id);
+  await prisma.$transaction([
+    prisma.bomLine.deleteMany({ where: { bomId: { in: bomIds } } }),
+    prisma.bom.deleteMany({ where: { variantId: { in: vids } } }),
+    prisma.orderLine.deleteMany({ where: { variantId: { in: vids } } }),
+    prisma.priceScenario.deleteMany({ where: { variantId: { in: vids } } }),
+    prisma.variant.deleteMany({ where: { productId } }),
+    prisma.product.delete({ where: { id: productId } }),
+  ]);
+  revalidatePath('/produtos');
 }

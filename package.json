@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "prisma db push --skip-generate --accept-data-loss && npm run seed:admin && next start",
     "start:prod": "prisma db push --skip-generate && npm run seed:admin && next start",
     "setup": "prisma generate && prisma db push && npm run seed:admin",
     "seed:admin": "node scripts/create-admin.mjs",

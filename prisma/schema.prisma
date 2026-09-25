@@ -292,6 +292,7 @@ model Variant {
   size            String?
   tablePriceCents Int      @default(0) // preço de tabela
   directCostCents Int      @default(0) // custo informado direto pela dona (caminho simples)
+  stockQty        Int      @default(0) // quantidade de peças prontas em estoque
   boms            Bom[]
   orderItems OrderLine[]
 }

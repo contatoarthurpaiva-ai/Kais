@@ -3,7 +3,9 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader, Table, Empty, Money } from '@/lib/ui';
+import { ConfirmSubmit } from '@/lib/confirm';
 import { CompraForm } from './compra-form';
+import { excluirMaterial } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +33,7 @@ export default async function Materiais() {
         {materiais.length === 0 ? (
           <Empty>Nenhum material ainda. Registre sua primeira compra acima.</Empty>
         ) : (
-          <Table head={['Material', 'Em estoque', 'Custo por medida']}>
+          <Table head={['Material', 'Em estoque', 'Custo por medida', '']}>
             {materiais.map((m) => {
               const qty = m.stockGroups.reduce((a, g) => a + Number(g.qty), 0);
               const valor = m.stockGroups.reduce((a, g) => a + g.valueCents, 0);
@@ -44,6 +46,12 @@ export default async function Materiais() {
                   </td>
                   <td style={{ padding: '8px 10px' }} className="num">
                     {qty > 0 ? <><Money cents={avg} />/{m.unit}</> : '—'}
+                  </td>
+                  <td style={{ padding: '8px 10px' }}>
+                    <form action={excluirMaterial}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <ConfirmSubmit message={`Excluir o material "${m.name}"?`}>Excluir</ConfirmSubmit>
+                    </form>
                   </td>
                 </tr>
               );

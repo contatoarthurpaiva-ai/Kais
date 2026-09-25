@@ -4,7 +4,8 @@ import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader, Field, Table, Empty, Money } from '@/lib/ui';
 import { Ajuda } from '@/lib/ajuda';
-import { criarCategoria, registrarDespesa, marcarPaga, criarConta } from './actions';
+import { ConfirmSubmit } from '@/lib/confirm';
+import { criarCategoria, registrarDespesa, marcarPaga, criarConta, excluirGasto } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,32 +18,55 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELADO: 'Cancelado',
 };
 
-export default async function Financeiro() {
+export default async function Financeiro({ searchParams }: { searchParams?: { mes?: string } }) {
   const s = getSession();
   if (!s) redirect('/login');
+
+  const hoje = new Date();
+  const [ano, m] = (searchParams?.mes ?? '').split('-').map(Number);
+  const valido = ano && m && m >= 1 && m <= 12;
+  const y = valido ? ano : hoje.getFullYear();
+  const mm = valido ? m - 1 : hoje.getMonth();
+  const inicio = new Date(y, mm, 1);
+  const fim = new Date(y, mm + 1, 1);
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const prev = fmt(new Date(y, mm - 1, 1));
+  const next = fmt(new Date(y, mm + 1, 1));
+  const mesLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(inicio);
 
   const [categorias, despesas, contas] = await Promise.all([
     prisma.expenseCategory.findMany({ where: { storeId: s.storeId }, orderBy: { name: 'asc' } }),
     prisma.expense.findMany({
-      where: { category: { storeId: s.storeId } },
+      where: { category: { storeId: s.storeId }, competence: { gte: inicio, lt: fim } },
       include: { category: true },
       orderBy: { competence: 'desc' },
-      take: 50,
     }),
     prisma.financialAccount.findMany({ where: { storeId: s.storeId } }),
   ]);
 
+  const totalMes = despesas.filter((d) => d.status !== 'CANCELADO').reduce((a, d) => a + d.amountCents, 0);
   const aPagar = despesas
     .filter((d) => d.status !== 'PAGO' && d.status !== 'CANCELADO')
     .reduce((a, d) => a + d.amountCents, 0);
 
   return (
     <div>
-      <PageHeader title="Financeiro" subtitle="Gastos, categorias e contas. Registre uma vez; os relatórios se atualizam." />
+      <PageHeader title="Gastos e contas" subtitle="Lance um gasto e ele já entra no mês. Registre uma vez; os números se atualizam." />
 
       <section className="card" style={{ marginBottom: 'var(--e-3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+          <strong style={{ textTransform: 'capitalize', color: 'var(--verde-escuro)' }}>{mesLabel}</strong>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href={`/financeiro?mes=${prev}`} className="btn secundario" style={{ padding: '6px 12px' }}>← anterior</a>
+            <a href={`/financeiro?mes=${next}`} className="btn secundario" style={{ padding: '6px 12px' }}>próximo →</a>
+          </div>
+        </div>
         <div className="linha-resultado">
-          <span className="rot">Contas a pagar (em aberto)</span>
+          <span className="rot">Gasto no mês</span>
+          <span className="val num"><Money cents={totalMes} /></span>
+        </div>
+        <div className="linha-resultado">
+          <span className="rot">Ainda a pagar (do mês)</span>
           <span className="val num"><Money cents={aPagar} /></span>
         </div>
       </section>
@@ -99,7 +123,7 @@ export default async function Financeiro() {
       </div>
 
       <section className="card" style={{ marginTop: 'var(--e-3)' }}>
-        <h2 style={{ marginTop: 0, fontSize: '1rem' }}>Gastos recentes</h2>
+        <h2 style={{ marginTop: 0, fontSize: "1rem" }}>Gastos do mês</h2>
         {despesas.length === 0 ? (
           <Empty>Nenhum gasto registrado.</Empty>
         ) : (
@@ -111,12 +135,18 @@ export default async function Financeiro() {
                 <td style={{ padding: '8px 10px' }} className="num"><Money cents={d.amountCents} /></td>
                 <td style={{ padding: '8px 10px' }}>{STATUS_LABEL[d.status]}</td>
                 <td style={{ padding: '8px 10px' }}>
-                  {d.status !== 'PAGO' && d.status !== 'CANCELADO' && (
-                    <form action={marcarPaga}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {d.status !== 'PAGO' && d.status !== 'CANCELADO' && (
+                      <form action={marcarPaga}>
+                        <input type="hidden" name="id" value={d.id} />
+                        <button className="btn secundario" style={{ padding: '4px 10px' }}>Marcar paga</button>
+                      </form>
+                    )}
+                    <form action={excluirGasto}>
                       <input type="hidden" name="id" value={d.id} />
-                      <button className="btn secundario" style={{ padding: '4px 10px' }}>Marcar paga</button>
+                      <ConfirmSubmit message="Excluir este gasto?">Excluir</ConfirmSubmit>
                     </form>
-                  )}
+                  </div>
                 </td>
               </tr>
             ))}
