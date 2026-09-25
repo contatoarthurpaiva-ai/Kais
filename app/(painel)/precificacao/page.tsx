@@ -6,6 +6,7 @@ import {
   costPerPieceFromBatch,
 } from '@/src/domain/index';
 import { formatBRLcents } from '@/lib/brl';
+import { Ajuda } from '@/lib/ajuda';
 
 type Sim = {
   targetPriceCents: number;
@@ -150,20 +151,31 @@ export default function Precificacao() {
         <section className="card">
           <h2 style={{ marginTop: 0, fontSize: '1rem' }}>Vendas e metas</h2>
           <div className="campo">
-            <label>Embalagem/frete por peça (R$)</label>
+            <label>
+              Embalagem/frete por peça (R$)
+              <Ajuda>Custos que variam por peça vendida além do material: saquinho, tag, frete que você banca. Se não tiver, deixe 0.</Ajuda>
+            </label>
             <input value={eReais} onChange={(e) => setEReais(e.target.value)} inputMode="decimal" />
           </div>
           <div className="campo">
-            <label>Taxa de pagamento (%)</label>
+            <label>
+              Taxa de pagamento (%)
+              <Ajuda>Quanto a maquininha ou o gateway desconta de cada venda. Ex.: 2,99 para cartão. Recebe só por Pix sem custo? Deixe 0.</Ajuda>
+            </label>
             <input value={taxaPct} onChange={(e) => setTaxaPct(e.target.value)} inputMode="decimal" />
-            <span className="ajuda">Ex.: taxa de cartão da modalidade escolhida.</span>
           </div>
           <div className="campo">
-            <label>Meta de margem (%)</label>
+            <label>
+              Meta de margem (%)
+              <Ajuda>Quanto você quer que sobre de cada peça, em % do preço. É o seu objetivo de ganho por peça — o sistema calcula o preço para chegar nele.</Ajuda>
+            </label>
             <input value={metaPct} onChange={(e) => setMetaPct(e.target.value)} inputMode="decimal" />
           </div>
           <div className="campo">
-            <label>Margem mínima (%)</label>
+            <label>
+              Margem mínima (%)
+              <Ajuda>O mínimo que aceita ganhar por peça. Serve para o sistema saber até onde dá para dar desconto sem furar o seu limite.</Ajuda>
+            </label>
             <input value={minPct} onChange={(e) => setMinPct(e.target.value)} inputMode="decimal" />
           </div>
           <div className="campo">
@@ -192,23 +204,38 @@ export default function Precificacao() {
           <>
             <div style={{ marginTop: 12 }} className="num">
               <div className="linha-resultado">
-                <span className="rot">Custo direto da peça (C)</span>
+                <span className="rot">
+                  Quanto a peça custa
+                  <Ajuda>Soma do material, da costura e dos outros custos diretos de uma peça.</Ajuda>
+                </span>
                 <span className="val">{formatBRLcents(custo.C)}</span>
               </div>
               <div className="linha-resultado">
-                <span className="rot">Preço-alvo (na meta)</span>
+                <span className="rot">
+                  Preço sugerido
+                  <Ajuda>Preço que faz você atingir a sua meta de margem. É o preço para colocar na etiqueta.</Ajuda>
+                </span>
                 <span className="val">{formatBRLcents(sim.targetPriceCents)}</span>
               </div>
               <div className="linha-resultado">
-                <span className="rot">Preço mínimo</span>
+                <span className="rot">
+                  Preço mínimo
+                  <Ajuda>Abaixo deste valor você fura a sua margem mínima. É o limite para promoções.</Ajuda>
+                </span>
                 <span className="val">{formatBRLcents(sim.minPriceCents)}</span>
               </div>
               <div className="linha-resultado">
-                <span className="rot">Piso sem contribuição p/ fixos</span>
+                <span className="rot">
+                  Preço de prejuízo
+                  <Ajuda>Abaixo daqui a venda não cobre nem o custo e as taxas — você vende no vermelho.</Ajuda>
+                </span>
                 <span className="val">{formatBRLcents(sim.zeroFloorCents)}</span>
               </div>
               <div className="linha-resultado">
-                <span className="rot">Desconto máximo seguro</span>
+                <span className="rot">
+                  Desconto máximo
+                  <Ajuda>O maior desconto que dá para dar sem furar a sua margem mínima.</Ajuda>
+                </span>
                 <span className="val">
                   {sim.maxDiscount.available
                     ? `${formatBRLcents(sim.maxDiscount.valueCents)} (${(sim.maxDiscount.pct * 100).toFixed(2)}%)`

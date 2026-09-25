@@ -1,4 +1,52 @@
 import { formatBRLcents } from './brl';
+import Link from 'next/link';
+import { Ajuda } from './ajuda';
+
+export function Greeting({ nome, sub }: { nome?: string; sub?: string }) {
+  const hora = new Date().getHours();
+  const saud = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  return (
+    <div>
+      <h1 className="saudacao">
+        {saud}
+        {nome ? `, ${nome}` : ''} 🌊
+      </h1>
+      {sub && <p className="sub">{sub}</p>}
+    </div>
+  );
+}
+
+export function ActionCard({
+  href,
+  icon,
+  title,
+  desc,
+  destaque,
+}: {
+  href: string;
+  icon: string;
+  title: string;
+  desc: string;
+  destaque?: boolean;
+}) {
+  return (
+    <Link href={href} className={`acao${destaque ? ' destaque' : ''}`}>
+      <span className="ic">{icon}</span>
+      <span className="tit">{title}</span>
+      <span className="desc">{desc}</span>
+    </Link>
+  );
+}
+
+export function MiniCard({ rot, val, obs }: { rot: string; val: string; obs?: string }) {
+  return (
+    <div className="mini">
+      <div className="rot">{rot}</div>
+      <div className="val num">{val}</div>
+      {obs && <div className="obs">{obs}</div>}
+    </div>
+  );
+}
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -30,6 +78,7 @@ export function Field({
   required,
   step,
   help,
+  tip,
 }: {
   label: string;
   name: string;
@@ -39,10 +88,14 @@ export function Field({
   required?: boolean;
   step?: string;
   help?: string;
+  tip?: string;
 }) {
   return (
     <div className="campo">
-      <label htmlFor={name}>{label}</label>
+      <label htmlFor={name}>
+        {label}
+        {tip && <Ajuda>{tip}</Ajuda>}
+      </label>
       <input
         id={name}
         name={name}

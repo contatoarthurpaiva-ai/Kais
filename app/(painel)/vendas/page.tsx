@@ -1,10 +1,9 @@
 /** Vendas (§7) — DB-facing. Fora do typecheck no ambiente sem rede. */
-import { randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { PageHeader, Field, Table, Empty, Money } from '@/lib/ui';
-import { registrarVenda } from './actions';
+import { PageHeader, Table, Empty, Money } from '@/lib/ui';
+import { SaleForm } from './sale-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,37 +41,13 @@ export default async function Vendas() {
         {variantes.length === 0 ? (
           <Empty>Cadastre um produto e variante antes de vender.</Empty>
         ) : (
-          <form action={registrarVenda}>
-            <input type="hidden" name="idempotencyKey" value={randomUUID()} />
-            <div className="campo">
-              <label htmlFor="variantId">Peça (variante)</label>
-              <select id="variantId" name="variantId" required>
-                {variantes.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.product.name} — {v.sku}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="grade">
-              <Field label="Quantidade" name="qty" type="number" step="1" defaultValue={1} required />
-              <Field label="Preço unitário (R$)" name="unitPrice" type="number" step="0.01" required />
-              <Field label="Frete cobrado (R$)" name="freightCharged" type="number" step="0.01" />
-              <Field label="Frete pago (R$)" name="freightPaid" type="number" step="0.01" />
-              <Field label="Parcelas" name="installments" type="number" step="1" defaultValue={1} />
-              <div className="campo">
-                <label htmlFor="status">Situação</label>
-                <select id="status" name="status" defaultValue="CONFIRMADO">
-                  <option value="CONFIRMADO">Confirmado (em carteira)</option>
-                  <option value="ENTREGUE">Entregue (receita realizada)</option>
-                  <option value="RASCUNHO">Rascunho</option>
-                </select>
-              </div>
-            </div>
-            <Field label="Canal" name="channel" placeholder="Instagram, WhatsApp…" />
-            <Field label="Cliente (opcional)" name="customerName" />
-            <button className="btn">Registrar venda</button>
-          </form>
+          <SaleForm
+            variants={variantes.map((v) => ({
+              id: v.id,
+              label: `${v.product.name} — ${v.sku}`,
+              tablePriceCents: v.tablePriceCents,
+            }))}
+          />
         )}
       </section>
 

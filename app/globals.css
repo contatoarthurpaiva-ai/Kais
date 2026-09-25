@@ -181,3 +181,143 @@ select {
   border-color: var(--borda);
   background: #f3efe6;
 }
+
+/* ─── Usabilidade: ações principais, ajuda contextual, saudação ─── */
+
+.saudacao {
+  font-size: 1.5rem;
+  color: var(--verde-escuro);
+  margin: 0 0 4px;
+}
+.saudacao + .sub {
+  color: #55655c;
+  margin: 0 0 var(--e-3);
+}
+
+/* cartões de ação (o que se faz todo dia) */
+.grid-acoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--e-2);
+  margin-bottom: var(--e-4);
+}
+.acao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-decoration: none;
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-2);
+  padding: var(--e-3);
+  box-shadow: var(--sombra);
+  transition: transform 0.08s ease, border-color 0.08s ease;
+}
+.acao:hover {
+  transform: translateY(-2px);
+  border-color: var(--verde);
+}
+.acao .ic {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.acao .tit {
+  font-weight: 700;
+  color: var(--verde-escuro);
+}
+.acao .desc {
+  font-size: 0.82rem;
+  color: #6b7a70;
+}
+.acao.destaque {
+  background: var(--verde-escuro);
+}
+.acao.destaque .tit,
+.acao.destaque .ic {
+  color: #fff;
+}
+.acao.destaque .desc {
+  color: #d7e5df;
+}
+
+/* botão de ajuda "?" com explicação (tap no celular) */
+.ajuda-wrap {
+  position: relative;
+  display: inline-flex;
+  margin-left: 6px;
+}
+.ajuda-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--borda);
+  background: var(--areia);
+  color: var(--verde-escuro);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.ajuda-btn:hover {
+  background: var(--verde);
+  color: #fff;
+  border-color: var(--verde);
+}
+.ajuda-pop {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  z-index: 20;
+  width: min(260px, 78vw);
+  background: var(--verde-escuro);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 10px 12px;
+  border-radius: var(--r-1);
+  box-shadow: var(--sombra);
+}
+
+/* rótulo de seção no menu lateral */
+.sec-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9fc3b5;
+  padding: 12px 12px 4px;
+}
+
+/* resumo compacto do "como vou" */
+.mini-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--e-2);
+}
+.mini {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-2);
+  padding: var(--e-2);
+}
+.mini .rot {
+  font-size: 0.78rem;
+  color: #6b7a70;
+}
+.mini .val {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--texto);
+  margin-top: 2px;
+}
+.mini .obs {
+  font-size: 0.72rem;
+  color: #9aa79e;
+  margin-top: 2px;
+}
+
+@media (max-width: 720px) {
+  .lateral .sec-label { display: none; }
+  .lateral nav > div { display: contents; }
+}

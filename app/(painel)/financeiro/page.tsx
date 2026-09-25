@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader, Field, Table, Empty, Money } from '@/lib/ui';
+import { Ajuda } from '@/lib/ajuda';
 import { criarCategoria, registrarDespesa, marcarPaga, criarConta } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,10 @@ export default async function Financeiro() {
           <form action={criarCategoria}>
             <Field label="Nome" name="name" required placeholder="Aluguel, marketing…" />
             <div className="campo">
-              <label htmlFor="nature">Natureza</label>
+              <label htmlFor="nature">
+                Natureza
+                <Ajuda>Para onde esse gasto vai no resultado. "Operacional" = tocar a loja (aluguel, internet). "Produção" = fazer as peças. Na dúvida, deixe Operacional.</Ajuda>
+              </label>
               <select id="nature" name="nature">
                 <option value="operacional">Operacional</option>
                 <option value="producao">Produção</option>
@@ -62,6 +66,7 @@ export default async function Financeiro() {
             </div>
             <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
               <input type="checkbox" name="fixed" /> Despesa fixa
+              <Ajuda>Marque se é um gasto que se repete todo mês com valor parecido (aluguel, internet, plano da loja). Deixe desmarcado para gastos que variam.</Ajuda>
             </label>
             <button className="btn secundario">Criar categoria</button>
           </form>
@@ -85,8 +90,8 @@ export default async function Financeiro() {
               </div>
               <Field label="Descrição" name="description" required />
               <Field label="Valor (R$)" name="amount" type="number" step="0.01" required />
-              <Field label="Competência" name="competence" type="date" />
-              <Field label="Vencimento" name="dueDate" type="date" />
+              <Field label="Competência" name="competence" type="date" tip="O mês a que o gasto se refere, mesmo que você pague em outra data. Ex.: a internet de março, mesmo paga em abril." />
+              <Field label="Vencimento" name="dueDate" type="date" tip="Quando essa conta vence. Ajuda a lembrar o que está para pagar." />
               <button className="btn">Registrar gasto</button>
             </form>
           )}

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader, Field, Table, Empty, Money } from '@/lib/ui';
+import { Ajuda } from '@/lib/ajuda';
 import { salvarLoja, salvarMargem, criarTaxa } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -44,8 +45,8 @@ export default async function Configuracoes() {
         <section className="card">
           <h2 style={{ marginTop: 0, fontSize: '1rem' }}>Metas de margem</h2>
           <form action={salvarMargem}>
-            <Field label="Margem mínima (%)" name="minMargin" type="number" step="0.01" defaultValue={margem ? Number(margem.minMargin) * 100 : 20} />
-            <Field label="Meta de margem (%)" name="goalMargin" type="number" step="0.01" defaultValue={margem ? Number(margem.goalMargin) * 100 : 35} />
+            <Field label="Margem mínima (%)" name="minMargin" type="number" step="0.01" defaultValue={margem ? Number(margem.minMargin) * 100 : 20} tip="O mínimo que você aceita ganhar por peça, em % do preço. Define até onde dá para dar desconto." />
+            <Field label="Meta de margem (%)" name="goalMargin" type="number" step="0.01" defaultValue={margem ? Number(margem.goalMargin) * 100 : 35} tip="Seu objetivo de ganho por peça, em % do preço. O preço sugerido é calculado para chegar nele." />
             <button className="btn secundario">Salvar metas</button>
           </form>
         </section>
@@ -74,12 +75,15 @@ export default async function Configuracoes() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="grade">
             <Field label="Nome" name="name" placeholder="Cartão à vista" />
             <div className="campo">
-              <label htmlFor="base">Base</label>
+              <label htmlFor="base">
+                Como a taxa é cobrada
+                <Ajuda>Sobre o que a taxa incide. Cartão costuma ser "sobre o produto". "Fixa por pedido" é um valor em reais cobrado uma vez por venda, não uma %.</Ajuda>
+              </label>
               <select id="base" name="base">
-                <option value="produto">Sobre o produto</option>
-                <option value="produto_mais_frete">Produto + frete</option>
-                <option value="frete">Sobre o frete</option>
-                <option value="fixa_por_pedido">Fixa por pedido</option>
+                <option value="produto">% sobre o produto</option>
+                <option value="produto_mais_frete">% sobre produto + frete</option>
+                <option value="frete">% sobre o frete</option>
+                <option value="fixa_por_pedido">Valor fixo por pedido</option>
               </select>
             </div>
             <Field label="Percentual (%)" name="pct" type="number" step="0.01" placeholder="2,99" />

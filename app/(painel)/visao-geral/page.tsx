@@ -1,15 +1,10 @@
-/**
- * Visão geral (§8) — dashboard consolidado.
- *
- * ⚠️ Server Component que lê do banco via Prisma e consolida com o motor testado
- * (revenueSummary/cashSummary/managerialResult). Depende do client Prisma gerado,
- * por isso fica fora do typecheck no ambiente sem rede. Referência da Etapa 4:
- * revise as queries contra o schema antes de produção. Sem dados fictícios — se
- * não houver lançamentos, os cartões mostram zero e sinalizam "resultado parcial".
- */
+/** Início — tela do dia a dia. DB-facing, fora do typecheck no ambiente sem rede. */
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Greeting, ActionCard, MiniCard } from '@/lib/ui';
+import { formatBRLcents } from '@/lib/brl';
 import {
   revenueSummary,
   cashSummary,
@@ -17,34 +12,32 @@ import {
   type SaleRecord,
   type ReceivableRecord,
 } from '@/src/domain/index';
-import { formatBRLcents } from '@/lib/brl';
 
 export const dynamic = 'force-dynamic';
 
-export default async function VisaoGeral() {
-  const session = getSession();
-  if (!session) redirect('/login');
+export default async function Inicio() {
+  const s = getSession();
+  if (!s) redirect('/login');
 
-  const orders = await prisma.salesOrder.findMany({
-    where: { storeId: session.storeId },
-    include: { items: true, receivables: true },
-  });
+  const [loja, orders, temProduto, temMaterial] = await Promise.all([
+    prisma.store.findUnique({ where: { id: s.storeId } }),
+    prisma.salesOrder.findMany({
+      where: { storeId: s.storeId },
+      include: { items: true, receivables: true },
+    }),
+    prisma.product.findFirst({ where: { storeId: s.storeId } }),
+    prisma.material.findFirst({ where: { storeId: s.storeId } }),
+  ]);
 
-  const sales: SaleRecord[] = orders.map((o) => {
-    const productRevenue = o.items.reduce(
-      (a, it) => a + (it.unitPriceCents - it.discountCents) * it.qty,
-      0,
-    );
-    const cmv = o.items.reduce((a, it) => a + it.costCents * it.qty, 0);
-    return {
-      status: o.status as SaleRecord['status'],
-      productRevenueCents: productRevenue,
-      discountsCents: o.items.reduce((a, it) => a + it.discountCents * it.qty, 0),
-      cmvCents: cmv,
-      variableCents: o.freightPaid,
-    };
-  });
+  const precisaConfigurar = !temProduto && !temMaterial && orders.length === 0;
 
+  const sales: SaleRecord[] = orders.map((o) => ({
+    status: o.status as SaleRecord['status'],
+    productRevenueCents: o.items.reduce((a, it) => a + (it.unitPriceCents - it.discountCents) * it.qty, 0),
+    discountsCents: 0,
+    cmvCents: o.items.reduce((a, it) => a + it.costCents * it.qty, 0),
+    variableCents: o.freightPaid,
+  }));
   const receivables: ReceivableRecord[] = orders.flatMap((o) =>
     o.receivables.map((r) => ({
       grossCents: r.grossCents,
@@ -54,59 +47,50 @@ export default async function VisaoGeral() {
       overdue: r.status !== 'RECEBIDO' && r.dueDate < new Date(),
     })),
   );
-
   const rev = revenueSummary(sales);
   const cash = cashSummary(receivables);
-  const fixed = await prisma.expense.aggregate({
-    _sum: { amountCents: true },
-    where: { category: { store: { id: session.storeId }, fixed: true } },
-  });
-  const result = managerialResult({
+  const res = managerialResult({
     recognizedRevenueCents: rev.recognizedCents,
     returnsCents: rev.returnsCents,
-    cmvCents: sales.reduce((a, s) => a + s.cmvCents, 0),
-    variableExpensesCents: sales.reduce((a, s) => a + s.variableCents, 0),
-    fixedExpensesCents: fixed._sum.amountCents ?? 0,
+    cmvCents: sales.reduce((a, x) => a + x.cmvCents, 0),
+    variableExpensesCents: sales.reduce((a, x) => a + x.variableCents, 0),
+    fixedExpensesCents: 0,
   });
-
-  const parcial = orders.length === 0;
-
-  const Cartao = ({ rot, val, obs }: { rot: string; val: string; obs?: string }) => (
-    <div className="card">
-      <div style={{ color: '#55655c', fontSize: '0.85rem' }}>{rot}</div>
-      <div className="num" style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 6 }}>
-        {val}
-      </div>
-      {obs && <div style={{ color: '#8a978e', fontSize: '0.75rem', marginTop: 4 }}>{obs}</div>}
-    </div>
-  );
 
   return (
     <div>
-      <h1 style={{ marginTop: 0, color: 'var(--verde-escuro)' }}>Visão geral</h1>
-      {parcial && (
-        <p className="estado incompleto" style={{ marginBottom: 16 }}>
-          • Sem lançamentos ainda — os números aparecem conforme você registra vendas e gastos.
-        </p>
-      )}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 'var(--e-2)',
-        }}
-      >
-        <Cartao rot="Receita reconhecida" val={formatBRLcents(rev.recognizedCents)} obs="entregue no período" />
-        <Cartao rot="Pedidos em carteira" val={formatBRLcents(rev.inCarteiraCents)} obs="ainda não realizada" />
-        <Cartao rot="Bruto recebido" val={formatBRLcents(cash.grossReceivedCents)} />
-        <Cartao rot="Líquido creditado" val={formatBRLcents(cash.netCreditedCents)} obs="após taxas" />
-        <Cartao rot="A receber" val={formatBRLcents(cash.toReceiveCents)} obs={`vencido: ${formatBRLcents(cash.overdueReceivableCents)}`} />
-        <Cartao rot="Contribuição" val={formatBRLcents(result.contributionCents)} />
-        <Cartao rot="Resultado gerencial" val={formatBRLcents(result.resultCents)} obs="após despesas do período" />
+      <Greeting nome={loja?.name === 'Kais' ? undefined : loja?.name} sub="O que você quer fazer agora?" />
+
+      <div className="grid-acoes">
+        <ActionCard href="/vendas" icon="🛍️" title="Registrar venda" desc="Anote uma venda em poucos toques" destaque />
+        <ActionCard href="/financeiro" icon="💸" title="Registrar gasto" desc="Lance uma despesa da loja" />
+        <ActionCard href="/produtos" icon="👙" title="Minhas peças" desc="Custo, preço e margem de cada peça" />
       </div>
-      <p style={{ color: '#8a978e', fontSize: '0.78rem', marginTop: 16 }}>
-        Saldo bancário não é lucro; contribuição não é lucro líquido. Não é demonstração contábil formal.
-      </p>
+
+      {precisaConfigurar ? (
+        <section className="card">
+          <h2 style={{ marginTop: 0, fontSize: '1rem' }}>Vamos começar? 🌱</h2>
+          <p style={{ color: '#55655c' }}>
+            Ainda não há nada cadastrado. Em poucos passos você deixa a loja pronta — cadastra seus
+            materiais, monta suas peças e já pode vender.
+          </p>
+          <Link href="/onboarding" className="btn">Ver os primeiros passos</Link>
+        </section>
+      ) : (
+        <section>
+          <h2 style={{ fontSize: '1rem', color: 'var(--verde-escuro)' }}>Como você está</h2>
+          <div className="mini-cards">
+            <MiniCard rot="Já entrou no caixa" val={formatBRLcents(cash.grossReceivedCents)} obs="dinheiro recebido" />
+            <MiniCard rot="Ainda vai receber" val={formatBRLcents(cash.toReceiveCents)} obs={cash.overdueReceivableCents > 0 ? formatBRLcents(cash.overdueReceivableCents) + ' atrasado' : 'em dia'} />
+            <MiniCard rot="Vendas realizadas" val={formatBRLcents(rev.recognizedCents)} obs="pedidos entregues" />
+            <MiniCard rot="Sobra estimada" val={formatBRLcents(res.contributionCents)} obs="depois de custo e taxas" />
+          </div>
+          <p style={{ color: '#9aa79e', fontSize: '0.75rem', marginTop: 12 }}>
+            "Sobra" é o que fica das vendas depois do custo das peças e das taxas — não é o lucro final
+            (faltam as despesas fixas). Veja o detalhe nos ajustes e relatórios.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

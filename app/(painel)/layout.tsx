@@ -3,16 +3,30 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 
-const MENU: { href: string; label: string; pronto?: boolean }[] = [
-  { href: '/visao-geral', label: 'Visão geral', pronto: true },
-  { href: '/precificacao', label: 'Precificação', pronto: true },
-  { href: '/produtos', label: 'Produtos e custos', pronto: true },
-  { href: '/vendas', label: 'Vendas', pronto: true },
-  { href: '/financeiro', label: 'Financeiro', pronto: true },
-  { href: '/estoque', label: 'Estoque', pronto: true },
-  { href: '/configuracoes', label: 'Configurações', pronto: true },
-  { href: '/onboarding', label: 'Primeiros passos', pronto: true },
-  { href: '/relatorios', label: 'Relatórios' },
+const SECOES: { titulo: string; itens: { href: string; label: string }[] }[] = [
+  {
+    titulo: 'Dia a dia',
+    itens: [
+      { href: '/visao-geral', label: 'Início' },
+      { href: '/vendas', label: 'Vender' },
+    ],
+  },
+  {
+    titulo: 'Catálogo',
+    itens: [
+      { href: '/produtos', label: 'Peças' },
+      { href: '/estoque', label: 'Materiais' },
+    ],
+  },
+  { titulo: 'Finanças', itens: [{ href: '/financeiro', label: 'Gastos e contas' }] },
+  {
+    titulo: 'Mais',
+    itens: [
+      { href: '/precificacao', label: 'Simular preço' },
+      { href: '/configuracoes', label: 'Ajustes' },
+      { href: '/onboarding', label: 'Primeiros passos' },
+    ],
+  },
 ];
 
 export default function PainelLayout({ children }: { children: React.ReactNode }) {
@@ -27,11 +41,15 @@ export default function PainelLayout({ children }: { children: React.ReactNode }
           <strong>Kais</strong>
         </div>
         <nav>
-          {MENU.map((m) => (
-            <Link key={m.href} href={m.href} className="item">
-              <span>{m.label}</span>
-              {!m.pronto && <em className="tag">em breve</em>}
-            </Link>
+          {SECOES.map((sec) => (
+            <div key={sec.titulo}>
+              <div className="sec-label">{sec.titulo}</div>
+              {sec.itens.map((m) => (
+                <Link key={m.href} href={m.href} className="item">
+                  <span>{m.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="rodape">

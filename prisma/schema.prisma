@@ -287,11 +287,12 @@ model Variant {
   id         String   @id @default(cuid())
   productId  String
   product    Product  @relation(fields: [productId], references: [id])
-  sku        String   @unique
-  color      String?
-  size       String?
-  tablePriceCents Int  @default(0) // preço de tabela
-  boms       Bom[]
+  sku             String   @unique
+  color           String?
+  size            String?
+  tablePriceCents Int      @default(0) // preço de tabela
+  directCostCents Int      @default(0) // custo informado direto pela dona (caminho simples)
+  boms            Bom[]
   orderItems OrderLine[]
 }
 
